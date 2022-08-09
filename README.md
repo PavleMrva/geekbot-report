@@ -5,6 +5,7 @@ It was implemented out of pure laziness, to avoid dull copy-pasting.
 
 ## Installation
 
+Download all dependencies
 ```bash
 go get -d ./...
 ```
@@ -33,6 +34,15 @@ After that just run and the geekbot report will be copied to clipboard
 ```bash
 ./geekbot-report
 ```
+
+If everything works well, you can finally install the Go program using the following command:
+```bash
+# background commands:
+# export $$(grep -v '^#' .env | xargs) && \ 
+# go install -ldflags "-X 'main.jiraUsername=$$JIRA_USERNAME' -X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' -X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN'"
+make install
+```
+> **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH`
 
 ### Alternative Method (w/o ENV setup):
 
