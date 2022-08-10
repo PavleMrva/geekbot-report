@@ -1,154 +1,125 @@
 package main
 
 import (
-	b64 "encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"github.com/atotto/clipboard"
+	"geekbot-report/external"
 	"github.com/joho/godotenv"
-	"io/ioutil"
-	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
-// get command line flags
-// if not defined, use ENV variables
-var tempoOauthToken string
-var jiraOauthToken string
-var jiraUsername string
+// if not precompiled, use ENV variables
+var geekBotChannel string
 
-type Worklog struct {
-	Issue struct {
-		Self string `json:"self"`
-	} `json:"issue"`
+type GeekBotQuestion struct {
+	Question   string
+	Answer     string
+	IsAnswered bool
 }
 
-type TempoResponse struct {
-	Results []Worklog `json:"results"`
+type SlackMessage struct {
+	Type    string `json:"type"`
+	SubType string `json:"subtype"`
+	Text    string `json:"text"`
 }
 
-type JiraResponse struct {
-	Key    string `json:"key"`
-	Fields struct {
-		Summary string `json:"summary"`
-	} `json:"fields"`
+type GeekBotHistoryResponse struct {
+	Messages []SlackMessage `json:"messages"`
 }
 
-func makeTempoRequest() []string {
-	url := "https://api.tempo.io/core/3/worklogs"
+var geekBotQuestions = []GeekBotQuestion{
+	{
+		Question:   "What did you do since yesterday?",
+		Answer:     "",
+		IsAnswered: false,
+	},
+	{
+		Question:   "What will you do today?",
+		Answer:     "sprint/support",
+		IsAnswered: false,
+	},
+	{
+		Question:   "Anything blocking your progress?",
+		Answer:     "no",
+		IsAnswered: false,
+	},
+	{
+		Question:   "Do you need assistance from any other teams?",
+		Answer:     "no",
+		IsAnswered: false,
+	},
+	{
+		Question:   "Anything miscellaneous?",
+		Answer:     "no",
+		IsAnswered: false,
+	},
+}
+
+func sendGeekBotMessage(message string) {
+	url := "https://slack.com/api/chat.postMessage"
+	method := "POST"
+
+	payload := strings.NewReader(fmt.Sprintf(`{
+	  "channel": "%s",
+	  "text": "%s"
+	}`, geekBotChannel, message))
+
+	external.SendSlackRequest(url, method, payload)
+}
+
+func getGeekBotLastMessage() GeekBotHistoryResponse {
+	url := fmt.Sprintf("https://slack.com/api/conversations.history?channel=%s&limit=%d", geekBotChannel, 1)
 	method := "GET"
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	body := external.SendSlackRequest(url, method, nil)
 
-	if err != nil {
-		fmt.Println(err)
-		return []string{}
-	}
-
-	todaysDate := time.Now().Weekday()
-
-	var formattedDate string
-	if todaysDate == time.Monday {
-		formattedDate = time.Now().Add(-72 * time.Hour).Format("2006-01-02")
-	} else {
-		formattedDate = time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-	}
-
-	requestQuery := req.URL.Query()
-
-	requestQuery.Add("from", formattedDate)
-	requestQuery.Add("to", formattedDate)
-	req.URL.RawQuery = requestQuery.Encode()
-
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-
-	authHeader := fmt.Sprintf("Bearer %s", tempoOauthToken)
-	req.Header.Add("Authorization", authHeader)
-
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return []string{}
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		return []string{}
-	}
-
-	var response TempoResponse
+	var response GeekBotHistoryResponse
 	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
 		fmt.Println("Cannot unmarshal JSON")
 	}
-
-	var issueLinks []string
-	for _, worklog := range response.Results {
-		issueLinks = append(issueLinks, worklog.Issue.Self)
-	}
-	return issueLinks
+	return response
 }
 
-func makeJiraRequest(issue string) string {
-	url := issue
-	method := "GET"
+func startGeekBotReport(report string) {
+	lastMessage := getGeekBotLastMessage()
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
-
-	if err != nil {
-		fmt.Println(err)
-		return ""
+	// If the geekbot report has not yet been initialized
+	if !strings.Contains(lastMessage.Messages[0].Text, geekBotQuestions[0].Question) {
+		sendGeekBotMessage("report")
+		time.Sleep(5 * time.Second)
 	}
 
-	authString := fmt.Sprintf("%s:%s", jiraUsername, jiraOauthToken)
-	encodedb64String := b64.StdEncoding.EncodeToString([]byte(authString))
-	authHeader := fmt.Sprintf("Basic %s", encodedb64String)
+	for _, geekBotQuestion := range geekBotQuestions {
+		fmt.Printf("\nGeekbot question: %s", geekBotQuestion.Question)
+		for !geekBotQuestion.IsAnswered {
+			messaage := getGeekBotLastMessage()
+			fmt.Printf("\nRetrieved message: %s", messaage)
 
-	req.Header.Add("Authorization", authHeader)
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
+			if strings.Contains(messaage.Messages[0].Text, geekBotQuestion.Question) {
+				if geekBotQuestion.Answer == "" {
+					geekBotQuestion.Answer = report
+				}
 
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return ""
+				sendGeekBotMessage(geekBotQuestion.Answer)
+				geekBotQuestion.IsAnswered = true
+			}
+			time.Sleep(2 * time.Second)
+		}
 	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		return ""
-	}
-
-	var response JiraResponse
-	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
-		fmt.Println("Cannot unmarshal JSON")
-	}
-
-	return fmt.Sprintf("%s - %s", response.Key, response.Fields.Summary)
 }
 
-// TODO: Implement Slack Bot to communicate with Slack Geekbot directly
 func main() {
-	if tempoOauthToken == "" || jiraOauthToken == "" || jiraUsername == "" {
-		_ = godotenv.Load()
-		flag.StringVar(&tempoOauthToken, "tempoOauthToken", os.Getenv("TEMPO_OAUTH_TOKEN"), "a string")
-		flag.StringVar(&jiraOauthToken, "jiraOauthToken", os.Getenv("JIRA_OAUTH_TOKEN"), "a string")
-		flag.StringVar(&jiraUsername, "jiraUsername", os.Getenv("JIRA_USERNAME"), "a string")
-		flag.Parse()
+	_ = godotenv.Load()
+	if geekBotChannel == "" {
+		geekBotChannel = os.Getenv("GEEKBOT_CHANNEL_ID")
 	}
-	issues := makeTempoRequest()
+	issues := external.MakeTempoRequest()
 
 	report := ""
 	for index, issue := range issues {
-		issueStr := makeJiraRequest(issue)
+		issueStr := external.MakeJiraRequest(issue)
 		report += issueStr
 
 		if index != len(issues)-1 {
@@ -156,5 +127,5 @@ func main() {
 		}
 	}
 	fmt.Println(report)
-	clipboard.WriteAll(report)
+	startGeekBotReport(report)
 }

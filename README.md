@@ -20,17 +20,27 @@ cp .env-example .env
 ```
 
 Next, the `make build` command should be run. It will extract defined ENV variables and
-the Go program will be compiled with these variables which will be the default values of
-`tempoOauthToken`, `jiraOauthToken` and `jiraUsername` from the script.
+the Go program will be compiled with these variables which will be the default values of the following variables:
+- `tempoOauthToken`
+- `jiraOauthToken`
+- `jiraUsername`
+- `slackOauthToken`
+- `geekBotChannel`
+
 
 ```bash
 # background commands:
-# export $(grep -v '^#' .env | xargs)
-# go build -ldflags "-X 'main.jiraUsername=$$JIRA_USERNAME' -X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' -X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN'"
+#	export $$(grep -v '^#' .env | xargs) && \
+# 	go build -ldflags \
+# 	"-X 'main.jiraUsername=$$JIRA_USERNAME' \
+# 	-X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
+# 	-X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
+# 	-X 'main.slackOauthToken=$$SLACK_OAUTH_TOKEN' \
+# 	-X 'main.geekBotChannel=$$GEEKBOT_CHANNEL_ID'"
 make build
 ```
 
-After that just run and the geekbot report will be copied to clipboard
+After that just run the binary and the geekbot report will be generated and sent
 ```bash
 ./geekbot-report
 ```
@@ -38,15 +48,13 @@ After that just run and the geekbot report will be copied to clipboard
 If everything works well, you can finally install the Go program using the following command:
 ```bash
 # background commands:
-# export $$(grep -v '^#' .env | xargs) && \ 
-# go install -ldflags "-X 'main.jiraUsername=$$JIRA_USERNAME' -X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' -X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN'"
+#	export $$(grep -v '^#' .env | xargs) && \
+# 	go install -ldflags \
+# 	"-X 'main.jiraUsername=$$JIRA_USERNAME' \
+# 	-X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
+# 	-X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
+# 	-X 'main.slackOauthToken=$$SLACK_OAUTH_TOKEN' \
+# 	-X 'main.geekBotChannel=$$GEEKBOT_CHANNEL_ID'"
 make install
 ```
 > **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH`
-
-### Alternative Method (w/o ENV setup):
-
-Build the program with `go build .` and run the following command
-```bash
-./geekbot-report -tempoOauthToken=<your-value> -jiraUsername=<your-value> -jiraOauthToken=<your-value>
-```
