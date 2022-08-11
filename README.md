@@ -1,11 +1,10 @@
 # Geekbot Report Script
 
-This script retrieves Tempo worklogs from Jira of previous work-day and copies the report to clipboard.
-It was implemented out of pure laziness, to avoid dull copy-pasting.
+This script retrieves Tempo worklogs from Jira of previous work-day and sends the daily standup report. 
 
 ## Installation
 
-Download all dependencies
+Download all dependencies:
 ```bash
 go get -d ./...
 ```
@@ -24,37 +23,34 @@ the Go program will be compiled with these variables which will be the default v
 - `tempoOauthToken`
 - `jiraOauthToken`
 - `jiraUsername`
-- `slackOauthToken`
-- `geekBotChannel`
+- `geekBotApiKey`
 
 
 ```bash
 # background commands:
 #	export $$(grep -v '^#' .env | xargs) && \
 # 	go build -ldflags \
-# 	"-X 'main.jiraUsername=$$JIRA_USERNAME' \
-# 	-X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
-# 	-X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'main.slackOauthToken=$$SLACK_OAUTH_TOKEN' \
-# 	-X 'main.geekBotChannel=$$GEEKBOT_CHANNEL_ID'"
+# 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
+# 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
+# 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
+# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY'"
 make build
 ```
 
-After that just run the binary and the geekbot report will be generated and sent
+After that run the binary and the geekbot report will be generated and sent:
 ```bash
 ./geekbot-report
 ```
 
-If everything works well, you can finally install the Go program using the following command:
+If everything works well, finally install the Go program using the following command:
 ```bash
 # background commands:
 #	export $$(grep -v '^#' .env | xargs) && \
 # 	go install -ldflags \
-# 	"-X 'main.jiraUsername=$$JIRA_USERNAME' \
-# 	-X 'main.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
-# 	-X 'main.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'main.slackOauthToken=$$SLACK_OAUTH_TOKEN' \
-# 	-X 'main.geekBotChannel=$$GEEKBOT_CHANNEL_ID'"
+# 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
+# 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
+# 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
+# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY'"
 make install
 ```
-> **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH`
+> **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH` in order to run installed Go program

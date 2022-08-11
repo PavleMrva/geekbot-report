@@ -8,11 +8,11 @@ import (
 	"os"
 )
 
-var slackOauthToken string
+var geekBotApiKey string
 
-func SendSlackRequest(url, method string, payload io.Reader) []byte {
-	if slackOauthToken == "" {
-		slackOauthToken = os.Getenv("SLACK_OAUTH_TOKEN")
+func SendGeekBotRequest(url, method string, payload io.Reader) []byte {
+	if geekBotApiKey == "" {
+		geekBotApiKey = os.Getenv("GEEKBOT_API_KEY")
 	}
 
 	client := &http.Client{}
@@ -22,8 +22,7 @@ func SendSlackRequest(url, method string, payload io.Reader) []byte {
 		fmt.Println(err)
 		return nil
 	}
-	authToken := fmt.Sprintf("Bearer %s", slackOauthToken)
-	req.Header.Add("Authorization", authToken)
+	req.Header.Add("Authorization", geekBotApiKey)
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := client.Do(req)

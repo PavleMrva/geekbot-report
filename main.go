@@ -1,120 +1,67 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"geekbot-report/external"
 	"github.com/joho/godotenv"
-	"os"
 	"strings"
-	"time"
 )
 
-// if not precompiled, use ENV variables
-var geekBotChannel string
-
-type GeekBotQuestion struct {
-	Question   string
-	Answer     string
-	IsAnswered bool
+type StandupQuestion struct {
+	Id   int    `json:"id"`
+	Text string `json:"text"`
 }
 
-type SlackMessage struct {
-	Type    string `json:"type"`
-	SubType string `json:"subtype"`
-	Text    string `json:"text"`
+type Standup struct {
+	Id        int               `json:"id"`
+	Channel   string            `json:"channel"`
+	Questions []StandupQuestion `json:"questions"`
 }
 
-type GeekBotHistoryResponse struct {
-	Messages []SlackMessage `json:"messages"`
+type Answer struct {
+	Text string `json:"text"`
 }
 
-var geekBotQuestions = []GeekBotQuestion{
-	{
-		Question:   "What did you do since yesterday?",
-		Answer:     "",
-		IsAnswered: false,
-	},
-	{
-		Question:   "What will you do today?",
-		Answer:     "sprint/support",
-		IsAnswered: false,
-	},
-	{
-		Question:   "Anything blocking your progress?",
-		Answer:     "no",
-		IsAnswered: false,
-	},
-	{
-		Question:   "Do you need assistance from any other teams?",
-		Answer:     "no",
-		IsAnswered: false,
-	},
-	{
-		Question:   "Anything miscellaneous?",
-		Answer:     "no",
-		IsAnswered: false,
-	},
+type Report struct {
+	StandupId string            `json:"standup_id"`
+	Answers   map[string]Answer `json:"answers"`
 }
 
-func sendGeekBotMessage(message string) {
-	url := "https://slack.com/api/chat.postMessage"
-	method := "POST"
-
-	payload := strings.NewReader(fmt.Sprintf(`{
-	  "channel": "%s",
-	  "text": "%s"
-	}`, geekBotChannel, message))
-
-	external.SendSlackRequest(url, method, payload)
-}
-
-func getGeekBotLastMessage() GeekBotHistoryResponse {
-	url := fmt.Sprintf("https://slack.com/api/conversations.history?channel=%s&limit=%d", geekBotChannel, 1)
+func getDailyStandup() Standup {
+	url := "https://api.geekbot.com/v1/standups"
 	method := "GET"
 
-	body := external.SendSlackRequest(url, method, nil)
+	body := external.SendGeekBotRequest(url, method, nil)
 
-	var response GeekBotHistoryResponse
+	var response []Standup
 	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
+		fmt.Println(err)
 		fmt.Println("Cannot unmarshal JSON")
 	}
-	return response
-}
 
-func startGeekBotReport(report string) {
-	lastMessage := getGeekBotLastMessage()
-
-	// If the geekbot report has not yet been initialized
-	if !strings.Contains(lastMessage.Messages[0].Text, geekBotQuestions[0].Question) {
-		sendGeekBotMessage("report")
-		time.Sleep(5 * time.Second)
-	}
-
-	for _, geekBotQuestion := range geekBotQuestions {
-		fmt.Printf("\nGeekbot question: %s", geekBotQuestion.Question)
-		for !geekBotQuestion.IsAnswered {
-			messaage := getGeekBotLastMessage()
-			fmt.Printf("\nRetrieved message: %s", messaage)
-
-			if strings.Contains(messaage.Messages[0].Text, geekBotQuestion.Question) {
-				if geekBotQuestion.Answer == "" {
-					geekBotQuestion.Answer = report
-				}
-
-				sendGeekBotMessage(geekBotQuestion.Answer)
-				geekBotQuestion.IsAnswered = true
-			}
-			time.Sleep(2 * time.Second)
+	var dailyStandup Standup
+	for _, standup := range response {
+		if standup.Channel == "daily-standup" {
+			dailyStandup = standup
 		}
 	}
+	return dailyStandup
+}
+
+func sendGeekBotReport(report Report) {
+	url := "https://api.geekbot.com/v1/reports"
+	method := "POST"
+
+	jsonData, _ := json.Marshal(report)
+	payload := bytes.NewBuffer(jsonData)
+
+	external.SendGeekBotRequest(url, method, payload)
 }
 
 func main() {
 	_ = godotenv.Load()
-	if geekBotChannel == "" {
-		geekBotChannel = os.Getenv("GEEKBOT_CHANNEL_ID")
-	}
 	issues := external.MakeTempoRequest()
 
 	report := ""
@@ -127,5 +74,23 @@ func main() {
 		}
 	}
 	fmt.Println(report)
-	startGeekBotReport(report)
+	dailyStandup := getDailyStandup()
+
+	dailyStandupReport := Report{
+		StandupId: fmt.Sprintf("%d", dailyStandup.Id),
+		Answers:   make(map[string]Answer),
+	}
+
+	for _, question := range dailyStandup.Questions {
+		key := fmt.Sprintf("%d", question.Id)
+		if strings.Contains(question.Text, "What did") {
+			dailyStandupReport.Answers[key] = Answer{report}
+		} else if strings.Contains(question.Text, "What will") {
+			dailyStandupReport.Answers[key] = Answer{"sprint/support"}
+		} else {
+			dailyStandupReport.Answers[key] = Answer{"-"}
+		}
+	}
+
+	sendGeekBotReport(dailyStandupReport)
 }
