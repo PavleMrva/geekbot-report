@@ -19,7 +19,7 @@ type JiraResponse struct {
 var jiraUsername string
 var jiraOauthToken string
 
-func MakeJiraRequest(issue string) string {
+func MakeJiraRequest(issue string) (string, error) {
 	if jiraUsername == "" || jiraOauthToken == "" {
 		jiraUsername = os.Getenv("JIRA_USERNAME")
 		jiraOauthToken = os.Getenv("JIRA_OAUTH_TOKEN")
@@ -33,7 +33,7 @@ func MakeJiraRequest(issue string) string {
 
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", err
 	}
 
 	authString := fmt.Sprintf("%s:%s", jiraUsername, jiraOauthToken)
@@ -47,20 +47,21 @@ func MakeJiraRequest(issue string) string {
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", err
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", err
 	}
 
 	var response JiraResponse
-	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
+	if err = json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
 		fmt.Println("Cannot unmarshal JSON")
+		return "", err
 	}
 
-	return fmt.Sprintf("%s - %s", response.Key, response.Fields.Summary)
+	return fmt.Sprintf("%s - %s", response.Key, response.Fields.Summary), nil
 }

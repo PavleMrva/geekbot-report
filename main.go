@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"geekbot-report/external"
 	"github.com/joho/godotenv"
+	"log"
 	"strings"
 )
 
@@ -29,16 +30,21 @@ type Report struct {
 	Answers   map[string]Answer `json:"answers"`
 }
 
-func getDailyStandup() Standup {
+func getDailyStandup() (Standup, error) {
 	url := "https://api.geekbot.com/v1/standups"
 	method := "GET"
 
-	body := external.SendGeekBotRequest(url, method, nil)
+	body, err := external.SendGeekBotRequest(url, method, nil)
+
+	if err != nil {
+		return Standup{}, err
+	}
 
 	var response []Standup
-	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
+	if err = json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
 		fmt.Println(err)
 		fmt.Println("Cannot unmarshal JSON")
+		return Standup{}, err
 	}
 
 	var dailyStandup Standup
@@ -47,26 +53,38 @@ func getDailyStandup() Standup {
 			dailyStandup = standup
 		}
 	}
-	return dailyStandup
+	return dailyStandup, nil
 }
 
-func sendGeekBotReport(report Report) {
+func sendGeekBotReport(report Report) ([]byte, error) {
 	url := "https://api.geekbot.com/v1/reports"
 	method := "POST"
 
 	jsonData, _ := json.Marshal(report)
 	payload := bytes.NewBuffer(jsonData)
 
-	external.SendGeekBotRequest(url, method, payload)
+	return external.SendGeekBotRequest(url, method, payload)
 }
 
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("panic occurred:", err)
+		}
+	}()
+
 	_ = godotenv.Load()
-	issues := external.MakeTempoRequest()
+	issues, err := external.MakeTempoRequest()
+	if err != nil {
+		panic("Error while sending Tempo request")
+	}
 
 	report := ""
 	for index, issue := range issues {
-		issueStr := external.MakeJiraRequest(issue)
+		issueStr, err := external.MakeJiraRequest(issue)
+		if err != nil {
+			panic("Error while sending Tempo request")
+		}
 		report += issueStr
 
 		if index != len(issues)-1 {
@@ -74,7 +92,11 @@ func main() {
 		}
 	}
 	fmt.Println(report)
-	dailyStandup := getDailyStandup()
+	dailyStandup, err := getDailyStandup()
+
+	if err != nil {
+		panic("Error while fetching daily standup")
+	}
 
 	dailyStandupReport := Report{
 		StandupId: fmt.Sprintf("%d", dailyStandup.Id),
@@ -92,5 +114,9 @@ func main() {
 		}
 	}
 
-	sendGeekBotReport(dailyStandupReport)
+	_, err = sendGeekBotReport(dailyStandupReport)
+
+	if err != nil {
+		panic("Error while fetching daily standup")
+	}
 }

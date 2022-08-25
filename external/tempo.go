@@ -21,7 +21,7 @@ type TempoResponse struct {
 
 var tempoOauthToken string
 
-func MakeTempoRequest() []string {
+func MakeTempoRequest() ([]string, error) {
 	if tempoOauthToken == "" {
 		tempoOauthToken = os.Getenv("TEMPO_OAUTH_TOKEN")
 	}
@@ -34,7 +34,7 @@ func MakeTempoRequest() []string {
 
 	if err != nil {
 		fmt.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 
 	todaysDate := time.Now().Weekday()
@@ -61,24 +61,25 @@ func MakeTempoRequest() []string {
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 
 	var response TempoResponse
-	if err := json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
+	if err = json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
 		fmt.Println("Cannot unmarshal JSON")
+		return []string{}, err
 	}
 
 	var issueLinks []string
 	for _, worklog := range response.Results {
 		issueLinks = append(issueLinks, worklog.Issue.Self)
 	}
-	return issueLinks
+	return issueLinks, nil
 }
