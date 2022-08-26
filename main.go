@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"geekbot-report/external"
 	"github.com/joho/godotenv"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -66,6 +68,27 @@ func sendGeekBotReport(report Report) ([]byte, error) {
 	return external.SendGeekBotRequest(url, method, payload)
 }
 
+func askForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("%s [y/n]: ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+}
+
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -91,7 +114,6 @@ func main() {
 			report += "\n"
 		}
 	}
-	fmt.Println(report)
 	dailyStandup, err := getDailyStandup()
 
 	if err != nil {
@@ -114,9 +136,18 @@ func main() {
 		}
 	}
 
-	_, err = sendGeekBotReport(dailyStandupReport)
+	confirmationQuestion := fmt.Sprintf("Your report for today:\n%s\nAre you sure that you want to send this report?", report)
+	answer := askForConfirmation(confirmationQuestion)
 
-	if err != nil {
-		panic("Error while fetching daily standup")
+	if answer {
+		_, err = sendGeekBotReport(dailyStandupReport)
+
+		if err != nil {
+			panic("Error while sending daily standup")
+		}
+		fmt.Println("Report sent successfully!")
+	} else {
+		fmt.Println("Report cancelled. Exiting...")
 	}
+	os.Exit(0)
 }
