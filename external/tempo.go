@@ -21,7 +21,7 @@ type TempoResponse struct {
 
 var tempoOauthToken string
 
-func MakeTempoRequest() ([]string, error) {
+func MakeTempoRequest(date string) ([]string, error) {
 	if tempoOauthToken == "" {
 		tempoOauthToken = os.Getenv("TEMPO_OAUTH_TOKEN")
 	}
@@ -37,19 +37,11 @@ func MakeTempoRequest() ([]string, error) {
 		return []string{}, err
 	}
 
-	todaysDate := time.Now().Weekday()
-
-	var formattedDate string
-	if todaysDate == time.Monday {
-		formattedDate = time.Now().Add(-72 * time.Hour).Format("2006-01-02")
-	} else {
-		formattedDate = time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-	}
-
+	today := time.Now().Format("2006-01-02")
 	requestQuery := req.URL.Query()
 
-	requestQuery.Add("from", formattedDate)
-	requestQuery.Add("to", formattedDate)
+	requestQuery.Add("from", date)
+	requestQuery.Add("to", today)
 	req.URL.RawQuery = requestQuery.Encode()
 
 	req.Header.Add("Accept", "application/json")

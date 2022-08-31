@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 type StandupQuestion struct {
@@ -30,6 +31,23 @@ type Answer struct {
 type Report struct {
 	StandupId string            `json:"standup_id"`
 	Answers   map[string]Answer `json:"answers"`
+}
+
+func getUniqueIssues(issues []string) []string {
+	var uniqueIssues []string
+	for _, issue := range issues {
+		issueExists := false
+		for _, uniqueIssue := range uniqueIssues {
+			if uniqueIssue == issue {
+				issueExists = true
+			}
+		}
+
+		if !issueExists {
+			uniqueIssues = append(uniqueIssues, issue)
+		}
+	}
+	return uniqueIssues
 }
 
 func getDailyStandup() (Standup, error) {
@@ -68,6 +86,43 @@ func sendGeekBotReport(report Report) ([]byte, error) {
 	return external.SendGeekBotRequest(url, method, payload)
 }
 
+func isDate(stringDate string) bool {
+	_, err := time.Parse("2006-01-02", stringDate)
+	return err == nil
+}
+
+func askForDate(s string) string {
+	reader := bufio.NewReader(os.Stdin)
+	todaysDate := time.Now().Weekday()
+
+	var defaultDate string
+	if todaysDate == time.Monday {
+		defaultDate = time.Now().Add(-72 * time.Hour).Format("2006-01-02")
+	} else {
+		defaultDate = time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	}
+
+	for {
+		fmt.Printf("%s\n(format: YYYY-MM-DD, default: last work-day): ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		response = strings.TrimSpace(response)
+
+		if response == "" {
+			return defaultDate
+		}
+
+		isResponseDate := isDate(response)
+		if isResponseDate {
+			return response
+		}
+	}
+}
+
 func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -97,16 +152,27 @@ func main() {
 	}()
 
 	_ = godotenv.Load()
-	issues, err := external.MakeTempoRequest()
+
+	selectedDate := askForDate("Choose the date form which you want to generate stand-up report")
+
+	fmt.Printf("\nGenerating report since %s\n", selectedDate)
+
+	issues, err := external.MakeTempoRequest(selectedDate)
+
 	if err != nil {
-		panic("Error while sending Tempo request")
+		log.Fatal("Error while sending Tempo request")
 	}
 
+	if len(issues) == 0 {
+		log.Fatal("No issues for report")
+	}
+
+	uniqueIssues := getUniqueIssues(issues)
 	report := ""
-	for index, issue := range issues {
+	for index, issue := range uniqueIssues {
 		issueStr, err := external.MakeJiraRequest(issue)
 		if err != nil {
-			panic("Error while sending Tempo request")
+			log.Fatal("Error while sending Tempo request")
 		}
 		report += issueStr
 
@@ -117,7 +183,7 @@ func main() {
 	dailyStandup, err := getDailyStandup()
 
 	if err != nil {
-		panic("Error while fetching daily standup")
+		log.Fatal("Error while fetching daily standup")
 	}
 
 	dailyStandupReport := Report{
@@ -136,14 +202,14 @@ func main() {
 		}
 	}
 
-	confirmationQuestion := fmt.Sprintf("Your report for today:\n%s\nAre you sure that you want to send this report?", report)
+	confirmationQuestion := fmt.Sprintf("\nYour report for today:\n%s\nAre you sure that you want to send this report?", report)
 	answer := askForConfirmation(confirmationQuestion)
 
 	if answer {
 		_, err = sendGeekBotReport(dailyStandupReport)
 
 		if err != nil {
-			panic("Error while sending daily standup")
+			log.Fatal("Error while sending daily standup")
 		}
 		fmt.Println("Report sent successfully!")
 	} else {
