@@ -13,7 +13,8 @@ go get -d ./...
 
 ### Main Method:
 
-For easier setup copy `.env-example` to `.env` and fill in the necessary data (Tempo OAuth Token, Jira Username/Email and Jira OAuth Token)
+For easier setup copy `.env-example` to `.env` and fill in the necessary data (Tempo OAuth Token, Jira Username/Email, Jira OAuth Token and Geekbot api key)
+Setting Jira User ID is necessary only if you are seeing tickets from the other people in your worklog. Otherwise you can leave it empty. 
 ```bash
 cp .env-example .env
 ```
@@ -24,6 +25,7 @@ the Go program will be compiled with these variables which will be the default v
 - `jiraOauthToken`
 - `jiraUsername`
 - `geekBotApiKey`
+- `jiraUserId`
 
 
 ```bash
@@ -33,7 +35,8 @@ the Go program will be compiled with these variables which will be the default v
 # 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
 # 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
 # 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY'"
+# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY' \
+#   -X 'geekbot-report/external.jiraUserId=$$JIRA_USER_ID'"
 make build
 ```
 
@@ -50,7 +53,8 @@ If everything works well, finally install the Go program using the following com
 # 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
 # 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
 # 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY'"
+# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY' \
+#   -X 'geekbot-report/external.jiraUserId=$$JIRA_USER_ID'"
 make install
 ```
 > **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH` in order to run installed Go program
