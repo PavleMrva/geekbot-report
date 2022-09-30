@@ -46,7 +46,7 @@ func MakeTempoRequest(date string) ([]string, error) {
 		return []string{}, err
 	}
 
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 	requestQuery := req.URL.Query()
 
 	requestQuery.Add("from", date)
