@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -160,7 +161,7 @@ func main() {
 	issues, err := external.MakeTempoRequest(selectedDate)
 
 	if err != nil {
-		log.Fatal("Error while sending Tempo request")
+		log.Fatal("Error while sending Tempo request", err)
 	}
 
 	if len(issues) == 0 {
@@ -169,22 +170,33 @@ func main() {
 
 	uniqueIssues := getUniqueIssues(issues)
 	report := ""
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(uniqueIssues) + 1)
+
 	for index, issue := range uniqueIssues {
-		issueStr, err := external.MakeJiraRequest(issue)
+		go func(index int, issue string) {
+			defer wg.Done()
+			issueStr, err := external.MakeJiraRequest(issue)
+			if err != nil {
+				log.Fatal("Error while sending Tempo request")
+			}
+			report += issueStr + "\n"
+		}(index, issue)
+	}
+
+	var dailyStandup Standup
+
+	go func() {
+		defer wg.Done()
+		dailyStandup, err = getDailyStandup()
+
 		if err != nil {
-			log.Fatal("Error while sending Tempo request")
+			log.Fatal("Error while fetching daily standup", err)
 		}
-		report += issueStr
+	}()
 
-		if index != len(issues)-1 {
-			report += "\n"
-		}
-	}
-	dailyStandup, err := getDailyStandup()
-
-	if err != nil {
-		log.Fatal("Error while fetching daily standup")
-	}
+	wg.Wait()
 
 	dailyStandupReport := Report{
 		StandupId: fmt.Sprintf("%d", dailyStandup.Id),
