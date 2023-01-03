@@ -13,7 +13,7 @@ go get -d ./...
 
 ### Main Method:
 
-For easier setup copy `.env-example` to `.env` and fill in the necessary data (Tempo OAuth Token, Jira Username/Email, Jira OAuth Token and Geekbot api key)
+For easier setup copy `.env-example` to `.env` and fill in the necessary data ([Tempo v4 API key](https://autaut.atlassian.net/plugins/servlet/ac/io.tempo.jira/tempo-app#!/configuration/api-integration), Jira Username/Email, [Jira API Token](https://id.atlassian.com/manage-profile/security/api-tokens) and [Geekbot api key](https://app.geekbot.com/dashboard/api-webhooks))
 Setting Jira User ID is necessary only if you are seeing tickets from the other people in your worklog. Otherwise you can leave it empty. 
 ```bash
 cp .env-example .env

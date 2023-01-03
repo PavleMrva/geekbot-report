@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := build
+
 build:
 	export $$(grep -v '^#' .env | xargs) && \
  	go build -ldflags \

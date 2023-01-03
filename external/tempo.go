@@ -35,7 +35,7 @@ func MakeTempoRequest(date string) ([]string, error) {
 		jiraUserId = os.Getenv("JIRA_USER_ID")
 	}
 
-	url := "https://api.tempo.io/core/3/worklogs"
+	url := "https://api.tempo.io/4/worklogs"
 	method := "GET"
 
 	client := &http.Client{}
