@@ -51,6 +51,7 @@ func MakeTempoRequest(date string) ([]string, error) {
 
 	requestQuery.Add("from", date)
 	requestQuery.Add("to", today)
+	requestQuery.Add("limit", "5000")
 	req.URL.RawQuery = requestQuery.Encode()
 
 	req.Header.Add("Accept", "application/json")

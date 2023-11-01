@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"geekbot-report/external"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type StandupQuestion struct {
