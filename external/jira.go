@@ -4,7 +4,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 )
@@ -20,8 +20,11 @@ var jiraUsername string
 var jiraOauthToken string
 
 func MakeJiraRequest(issue string) (string, error) {
-	if jiraUsername == "" || jiraOauthToken == "" {
+	if jiraUsername == "" {
 		jiraUsername = os.Getenv("JIRA_USERNAME")
+	}
+
+	if jiraOauthToken == "" {
 		jiraOauthToken = os.Getenv("JIRA_OAUTH_TOKEN")
 	}
 
@@ -29,7 +32,7 @@ func MakeJiraRequest(issue string) (string, error) {
 	method := "GET"
 
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, url, http.NoBody)
 
 	if err != nil {
 		fmt.Println(err)
@@ -51,7 +54,7 @@ func MakeJiraRequest(issue string) (string, error) {
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
 		return "", err

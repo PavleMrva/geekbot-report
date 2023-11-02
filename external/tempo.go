@@ -10,7 +10,7 @@ import (
 )
 
 type Author struct {
-	AccountId string `json:"accountId"`
+	AccountID string `json:"accountId"`
 }
 
 type Worklog struct {
@@ -25,21 +25,22 @@ type TempoResponse struct {
 }
 
 var tempoOauthToken string
-var jiraUserId string
+var jiraUserID string
 
 func MakeTempoRequest(date string) ([]string, error) {
 	if tempoOauthToken == "" {
 		tempoOauthToken = os.Getenv("TEMPO_OAUTH_TOKEN")
 	}
-	if jiraUserId == "" {
-		jiraUserId = os.Getenv("JIRA_USER_ID")
+
+	if jiraUserID == "" {
+		jiraUserID = os.Getenv("JIRA_USER_ID")
 	}
 
 	url := "https://api.tempo.io/4/worklogs"
 	method := "GET"
 
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, url, http.NoBody)
 
 	if err != nil {
 		fmt.Println(err)
@@ -80,10 +81,12 @@ func MakeTempoRequest(date string) ([]string, error) {
 	}
 
 	var issueLinks []string
+
 	for _, worklog := range response.Results {
-		if jiraUserId == "" || jiraUserId == worklog.Author.AccountId {
+		if jiraUserID == worklog.Author.AccountID {
 			issueLinks = append(issueLinks, worklog.Issue.Self)
 		}
 	}
+
 	return issueLinks, nil
 }

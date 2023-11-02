@@ -24,8 +24,8 @@ the Go program will be compiled with these variables which will be the default v
 - `tempoOauthToken`
 - `jiraOauthToken`
 - `jiraUsername`
-- `geekBotApiKey`
-- `jiraUserId`
+- `geekBotAPIKey`
+- `jiraUserID`
 
 
 ```bash
@@ -35,8 +35,8 @@ the Go program will be compiled with these variables which will be the default v
 # 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
 # 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
 # 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY' \
-#   -X 'geekbot-report/external.jiraUserId=$$JIRA_USER_ID'"
+# 	-X 'geekbot-report/external.geekBotAPIKey=$$GEEKBOT_API_KEY' \
+#   -X 'geekbot-report/external.jiraUserID=$$JIRA_USER_ID'"
 make build
 ```
 
@@ -53,8 +53,8 @@ If everything works well, finally install the Go program using the following com
 # 	"-X 'geekbot-report/external.jiraUsername=$$JIRA_USERNAME' \
 # 	-X 'geekbot-report/external.jiraOauthToken=$$JIRA_OAUTH_TOKEN' \
 # 	-X 'geekbot-report/external.tempoOauthToken=$$TEMPO_OAUTH_TOKEN' \
-# 	-X 'geekbot-report/external.geekBotApiKey=$$GEEKBOT_API_KEY' \
-#   -X 'geekbot-report/external.jiraUserId=$$JIRA_USER_ID'"
+# 	-X 'geekbot-report/external.geekBotAPIKey=$$GEEKBOT_API_KEY' \
+#   -X 'geekbot-report/external.jiraUserID=$$JIRA_USER_ID'"
 make install
 ```
 > **_NOTE_** You should have `$GOPATH/bin` inside your `$PATH` in order to run installed Go program

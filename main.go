@@ -8,6 +8,7 @@ import (
 	"geekbot-report/external"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -16,12 +17,12 @@ import (
 )
 
 type StandupQuestion struct {
-	Id   int    `json:"id"`
+	ID   int    `json:"id"`
 	Text string `json:"text"`
 }
 
 type Standup struct {
-	Id        int               `json:"id"`
+	ID        int               `json:"id"`
 	Channel   string            `json:"channel"`
 	Questions []StandupQuestion `json:"questions"`
 }
@@ -31,14 +32,16 @@ type Answer struct {
 }
 
 type Report struct {
-	StandupId string            `json:"standup_id"`
+	StandupID string            `json:"standup_id"`
 	Answers   map[string]Answer `json:"answers"`
 }
 
 func getUniqueIssues(issues []string) []string {
 	var uniqueIssues []string
+
 	for _, issue := range issues {
 		issueExists := false
+
 		for _, uniqueIssue := range uniqueIssues {
 			if uniqueIssue == issue {
 				issueExists = true
@@ -49,6 +52,7 @@ func getUniqueIssues(issues []string) []string {
 			uniqueIssues = append(uniqueIssues, issue)
 		}
 	}
+
 	return uniqueIssues
 }
 
@@ -64,17 +68,18 @@ func getDailyStandup() (Standup, error) {
 
 	var response []Standup
 	if err = json.Unmarshal(body, &response); err != nil { // Parse []byte to go struct pointer
-		fmt.Println(err)
-		fmt.Println("Cannot unmarshal JSON")
+		log.Println("Cannot unmarshal JSON", err.Error())
 		return Standup{}, err
 	}
 
 	var dailyStandup Standup
+
 	for _, standup := range response {
 		if standup.Channel == "daily-standup" {
 			dailyStandup = standup
 		}
 	}
+
 	return dailyStandup, nil
 }
 
@@ -98,6 +103,7 @@ func askForDate(s string) string {
 	todaysDate := time.Now().Weekday()
 
 	var defaultDate string
+
 	if todaysDate == time.Monday {
 		defaultDate = time.Now().Add(-72 * time.Hour).Format("2006-01-02")
 	} else {
@@ -113,7 +119,6 @@ func askForDate(s string) string {
 		}
 
 		response = strings.TrimSpace(response)
-
 		if response == "" {
 			return defaultDate
 		}
@@ -162,27 +167,30 @@ func main() {
 	issues, err := external.MakeTempoRequest(selectedDate)
 
 	if err != nil {
-		log.Fatal("Error while sending Tempo request", err)
+		log.Panic("Error while sending Tempo request", err)
 	}
 
 	if len(issues) == 0 {
-		log.Fatal("No issues for report")
+		log.Panic("No issues for report")
 	}
 
 	uniqueIssues := getUniqueIssues(issues)
-	report := ""
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(uniqueIssues) + 1)
 
+	var reportIssues sort.StringSlice
+
 	for index, issue := range uniqueIssues {
 		go func(index int, issue string) {
 			defer wg.Done()
+
 			issueStr, err := external.MakeJiraRequest(issue)
 			if err != nil {
-				log.Fatal("Error while sending Tempo request")
+				log.Fatal("Error while sending JIRA request")
 			}
-			report += issueStr + "\n"
+
+			reportIssues = append(reportIssues, issueStr)
 		}(index, issue)
 	}
 
@@ -190,6 +198,7 @@ func main() {
 
 	go func() {
 		defer wg.Done()
+
 		dailyStandup, err = getDailyStandup()
 
 		if err != nil {
@@ -199,18 +208,23 @@ func main() {
 
 	wg.Wait()
 
+	reportIssues.Sort()
+	report := strings.Join(reportIssues, "\n")
+
 	dailyStandupReport := Report{
-		StandupId: fmt.Sprintf("%d", dailyStandup.Id),
+		StandupID: fmt.Sprintf("%d", dailyStandup.ID),
 		Answers:   make(map[string]Answer),
 	}
 
 	for _, question := range dailyStandup.Questions {
-		key := fmt.Sprintf("%d", question.Id)
-		if strings.Contains(question.Text, "What did") {
+		key := fmt.Sprintf("%d", question.ID)
+
+		switch {
+		case strings.Contains(question.Text, "What did"):
 			dailyStandupReport.Answers[key] = Answer{report}
-		} else if strings.Contains(question.Text, "What will") {
+		case strings.Contains(question.Text, "What will"):
 			dailyStandupReport.Answers[key] = Answer{"sprint/support"}
-		} else {
+		default:
 			dailyStandupReport.Answers[key] = Answer{"-"}
 		}
 	}
@@ -224,9 +238,11 @@ func main() {
 		if err != nil {
 			log.Fatal("Error while sending daily standup")
 		}
+
 		fmt.Println("Report sent successfully!")
 	} else {
 		fmt.Println("Report cancelled. Exiting...")
 	}
+
 	os.Exit(0)
 }

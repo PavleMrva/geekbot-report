@@ -1,0 +1,72 @@
+linters-settings:
+  gofmt:
+    # Apply the rewrite rules to the source before reformatting.
+    # https://pkg.go.dev/cmd/gofmt
+    # Default: []
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+  errcheck:
+    check-type-assertions: true
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  revive:
+    severity: error
+  govet:
+    check-shadowing: true
+    enable:
+      - fieldalignment
+  nolintlint:
+    require-explanation: true
+    require-specific: true
+
+linters:
+  disable-all: true
+  enable:
+    - dogsled
+#    - dupl
+    - errcheck
+    - exportloopref
+    - exhaustive
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+#    - gomnd
+    - gocyclo
+    - gosec
+    - gosimple
+#    - govet
+    - ineffassign
+    - misspell
+    - nolintlint
+    - nakedret
+#    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - thelper
+    - typecheck
+    - unconvert
+    - whitespace
+    - wsl
+run:
+  skip-dirs:
+    - test
+  skip-files:
+    - cmd/main\.go
+  issues-exit-code: 1
+  timeout: 5m
+  go: '1.21'
+
+issues:
+  fix: true
